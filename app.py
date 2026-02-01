@@ -176,10 +176,61 @@ if uploaded_file and st.button("Process"):
             headers=headers
         )
 
-        # ✅ response IS USED HERE (correct scope)
         if response.status_code == 201:
             sap_d = response.json().get("d", {})
-            save_to_bigquery(sap_d)
+
+            # ✅ BUILD BQ ROW HERE
+            bq_row = {
+                "SalesOrderWithoutCharge": sap_d.get("SalesOrderWithoutCharge"),
+                "SalesOrderWithoutChargeType": sap_d.get("SalesOrderWithoutChargeType"),
+                "SalesOrganization": sap_d.get("SalesOrganization"),
+                "DistributionChannel": sap_d.get("DistributionChannel"),
+                "OrganizationDivision": sap_d.get("OrganizationDivision"),
+                "SalesGroup": sap_d.get("SalesGroup"),
+                "SalesOffice": sap_d.get("SalesOffice"),
+                "SalesDistrict": sap_d.get("SalesDistrict"),
+                "SoldToParty": sap_d.get("SoldToParty"),
+                "CreationDate": sap_d.get("CreationDate"),
+                "CreatedByUser": sap_d.get("CreatedByUser"),
+                "LastChangeDate": sap_d.get("LastChangeDate"),
+                "LastChangeDateTime": sap_d.get("LastChangeDateTime"),
+                "PurchaseOrderByCustomer": sap_d.get("PurchaseOrderByCustomer"),
+                "CustomerPurchaseOrderType": sap_d.get("CustomerPurchaseOrderType"),
+                "CustomerPurchaseOrderDate": sap_d.get("CustomerPurchaseOrderDate"),
+                "SalesOrderWithoutChargeDate": sap_d.get("SalesOrderWithoutChargeDate"),
+                "TotalNetAmount": sap_d.get("TotalNetAmount"),
+                "TransactionCurrency": sap_d.get("TransactionCurrency"),
+                "SDDocumentReason": sap_d.get("SDDocumentReason"),
+                "RequestedDeliveryDate": sap_d.get("RequestedDeliveryDate"),
+                "DeliveryDateTypeRule": sap_d.get("DeliveryDateTypeRule"),
+                "ShippingCondition": sap_d.get("ShippingCondition"),
+                "CompleteDeliveryIsDefined": bool(sap_d.get("CompleteDeliveryIsDefined")),
+                "ShippingType": sap_d.get("ShippingType"),
+                "DeliveryBlockReason": sap_d.get("DeliveryBlockReason"),
+                "HeaderBillingBlockReason": sap_d.get("HeaderBillingBlockReason"),
+                "IncotermsClassification": sap_d.get("IncotermsClassification"),
+                "IncotermsTransferLocation": sap_d.get("IncotermsTransferLocation"),
+                "IncotermsLocation1": sap_d.get("IncotermsLocation1"),
+                "IncotermsLocation2": sap_d.get("IncotermsLocation2"),
+                "IncotermsVersion": sap_d.get("IncotermsVersion"),
+                "CostCenter": sap_d.get("CostCenter"),
+                "ReferenceSDDocument": sap_d.get("ReferenceSDDocument"),
+                "AccountingDocExternalReference": sap_d.get("AccountingDocExternalReference"),
+                "ReferenceSDDocumentCategory": sap_d.get("ReferenceSDDocumentCategory"),
+                "OverallSDProcessStatus": sap_d.get("OverallSDProcessStatus"),
+                "OverallTotalDeliveryStatus": sap_d.get("OverallTotalDeliveryStatus"),
+                "OverallSDDocumentRejectionSts": sap_d.get("OverallSDDocumentRejectionSts"),
+                "raw_response": sap_d,
+                "created_at": datetime.utcnow()
+            }
+
+            save_to_bigquery(bq_row)
+
+            results.append({
+                "SoldToParty": sap_d.get("SoldToParty"),
+                "SalesOrderWithoutCharge": sap_d.get("SalesOrderWithoutCharge"),
+                "Status": "SUCCESS"
+            })
 
             st.success(
                 f"SUCCESS → SoldToParty {sap_d.get('SoldToParty')} | "
@@ -187,75 +238,17 @@ if uploaded_file and st.button("Process"):
             )
 
         else:
+            results.append({
+                "SoldToParty": row["SoldToParty"],
+                "SalesOrderWithoutCharge": None,
+                "Status": "FAILED",
+                "Error": response.text
+            })
+
             st.error(
                 f"FAILED → SoldToParty {row['SoldToParty']} | "
                 f"Error: {response.text}"
             )
 
-    bq_row = {
-        "SalesOrderWithoutCharge": sap_d.get("SalesOrderWithoutCharge"),
-        "SalesOrderWithoutChargeType": sap_d.get("SalesOrderWithoutChargeType"),
-        "SalesOrganization": sap_d.get("SalesOrganization"),
-        "DistributionChannel": sap_d.get("DistributionChannel"),
-        "OrganizationDivision": sap_d.get("OrganizationDivision"),
-        "SalesGroup": sap_d.get("SalesGroup"),
-        "SalesOffice": sap_d.get("SalesOffice"),
-        "SalesDistrict": sap_d.get("SalesDistrict"),
-        "SoldToParty": sap_d.get("SoldToParty"),
-        "CreationDate": sap_d.get("CreationDate"),
-        "CreatedByUser": sap_d.get("CreatedByUser"),
-        "LastChangeDate": sap_d.get("LastChangeDate"),
-        "LastChangeDateTime": sap_d.get("LastChangeDateTime"),
-        "PurchaseOrderByCustomer": sap_d.get("PurchaseOrderByCustomer"),
-        "CustomerPurchaseOrderType": sap_d.get("CustomerPurchaseOrderType"),
-        "CustomerPurchaseOrderDate": sap_d.get("CustomerPurchaseOrderDate"),
-        "SalesOrderWithoutChargeDate": sap_d.get("SalesOrderWithoutChargeDate"),
-        "TotalNetAmount": sap_d.get("TotalNetAmount"),
-        "TransactionCurrency": sap_d.get("TransactionCurrency"),
-        "SDDocumentReason": sap_d.get("SDDocumentReason"),
-        "RequestedDeliveryDate": sap_d.get("RequestedDeliveryDate"),
-        "DeliveryDateTypeRule": sap_d.get("DeliveryDateTypeRule"),
-        "ShippingCondition": sap_d.get("ShippingCondition"),
-        "CompleteDeliveryIsDefined": bool(sap_d.get("CompleteDeliveryIsDefined")),
-        "ShippingType": sap_d.get("ShippingType"),
-        "DeliveryBlockReason": sap_d.get("DeliveryBlockReason"),
-        "HeaderBillingBlockReason": sap_d.get("HeaderBillingBlockReason"),
-        "IncotermsClassification": sap_d.get("IncotermsClassification"),
-        "IncotermsTransferLocation": sap_d.get("IncotermsTransferLocation"),
-        "IncotermsLocation1": sap_d.get("IncotermsLocation1"),
-        "IncotermsLocation2": sap_d.get("IncotermsLocation2"),
-        "IncotermsVersion": sap_d.get("IncotermsVersion"),
-        "CostCenter": sap_d.get("CostCenter"),
-        "ReferenceSDDocument": sap_d.get("ReferenceSDDocument"),
-        "AccountingDocExternalReference": sap_d.get("AccountingDocExternalReference"),
-        "ReferenceSDDocumentCategory": sap_d.get("ReferenceSDDocumentCategory"),
-        "OverallSDProcessStatus": sap_d.get("OverallSDProcessStatus"),
-        "OverallTotalDeliveryStatus": sap_d.get("OverallTotalDeliveryStatus"),
-        "OverallSDDocumentRejectionSts": sap_d.get("OverallSDDocumentRejectionSts"),
-
-        # 🔥 FULL RAW RESPONSE (exact SAP JSON)
-        "raw_response": sap_d,
-
-        # 🔥 AUDIT COLUMN
-        "created_at": datetime.utcnow()
-    }
-
-    save_to_bigquery(bq_row)
-
-    results.append({
-        "SoldToParty": sap_d.get("SoldToParty"),
-        "SalesOrderWithoutCharge": sap_d.get("SalesOrderWithoutCharge"),
-        "Status": "SUCCESS"
-    })
-else:
-    results.append({
-        "SoldToParty": row["SoldToParty"],
-        "SalesOrderWithoutCharge": None,
-        "Status": "FAILED",
-        "Error": response.text
-    })
-
-
     st.success("Processing completed")
     st.dataframe(pd.DataFrame(results))
-    
