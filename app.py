@@ -134,9 +134,16 @@ st.title("🚀 SAP FOC Sales Order → BigQuery")
 
 uploaded_file = st.file_uploader("Upload Excel", type=["xlsx"])
 
-if uploaded_file and st.button("Process"):
+if uploaded_file:
 
     df = pd.read_excel(uploaded_file)
+    grouped = df.groupby(["SoldToParty", "PO_Number"])
+
+    preview = grouped.size().reset_index(name="ItemCount")
+    st.subheader("📋 Preview (Grouped Orders)")
+    st.dataframe(preview)
+
+    if st.button("✅ Confirm & Submit"):
 
     csrf_token = fetch_csrf_token()
     headers = {
