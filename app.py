@@ -23,7 +23,17 @@ BQ_TABLE = "sap_foc_sales_orders"
 # ======================
 # BIGQUERY CLIENT
 # ======================
-bq_client = bigquery.Client(project=BQ_PROJECT)
+from google.oauth2 import service_account
+
+credentials = service_account.Credentials.from_service_account_info(
+    st.secrets["gcp_service_account"]
+)
+
+bq_client = bigquery.Client(
+    project=BQ_PROJECT,
+    credentials=credentials
+)
+
 
 # ======================
 # SESSION
