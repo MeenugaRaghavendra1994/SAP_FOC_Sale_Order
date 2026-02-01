@@ -12,11 +12,12 @@ BASE_URL = "https://my411419-api.s4hana.cloud.sap"
 SERVICE_PATH = "/sap/opu/odata/sap/API_SALES_ORDER_WITHOUT_CHARGE_SRV"
 POST_ENDPOINT = SERVICE_PATH + "/A_SalesOrderWithoutCharge"
 
-USERNAME = st.secrets["S4C_AAJ"]
-PASSWORD = st.secrets["6bNaYr#&}6\QQLH)y7p8}z})=g=9)WA#zC@+c9lr"]
+USERNAME = st.secrets["SAP_USERNAME"]
+PASSWORD = st.secrets["SAP_PASSWORD"]
 
-BQ_PROJECT = st.secrets["eduvate-orders-483809"]
-BQ_DATASET = st.secrets["SAP_FOC"]
+BQ_PROJECT = st.secrets["BQ_PROJECT"]
+BQ_DATASET = st.secrets["BQ_DATASET"]
+
 BQ_TABLE = "sap_foc_sales_orders"
 
 # ======================
