@@ -153,6 +153,7 @@ st.title("🚀 SAP FOC Sales Order → BigQuery")
 uploaded_file = st.file_uploader("Upload Excel", type=["xlsx"])
 
 if uploaded_file and st.button("Process"):
+
     df = pd.read_excel(uploaded_file)
     csrf_token = fetch_csrf_token()
 
@@ -166,14 +167,30 @@ if uploaded_file and st.button("Process"):
     results = []
 
     for _, row in df.iterrows():
+
         payload = build_payload(row, today_date)
+
         response = session.post(
             BASE_URL + POST_ENDPOINT,
             json=payload,
             headers=headers
         )
-if response.status_code == 201:
-    sap_d = response.json().get("d", {})
+
+        # ✅ response IS USED HERE (correct scope)
+        if response.status_code == 201:
+            sap_d = response.json().get("d", {})
+            save_to_bigquery(sap_d)
+
+            st.success(
+                f"SUCCESS → SoldToParty {sap_d.get('SoldToParty')} | "
+                f"Order {sap_d.get('SalesOrderWithoutCharge')}"
+            )
+
+        else:
+            st.error(
+                f"FAILED → SoldToParty {row['SoldToParty']} | "
+                f"Error: {response.text}"
+            )
 
     bq_row = {
         "SalesOrderWithoutCharge": sap_d.get("SalesOrderWithoutCharge"),
