@@ -31,7 +31,8 @@ credentials = service_account.Credentials.from_service_account_info(
 
 bq_client = bigquery.Client(
     project=BQ_PROJECT,
-    credentials=credentials
+    credentials=credentials,
+    location="asia-south1"
 )
 
 
@@ -141,9 +142,16 @@ def save_to_bigquery(d):
     }
 
     table_id = f"{BQ_PROJECT}.{BQ_DATASET}.{BQ_TABLE}"
-    errors = bq_client.insert_rows_json(table_id, [row])
-    if errors:
-        raise RuntimeError(errors)
+
+    job = bq_client.load_table_from_json(
+        [row],
+        table_id,
+        location="asia-south1",
+        job_config=bigquery.LoadJobConfig(
+            write_disposition="WRITE_APPEND"
+        )
+    )
+    job.result()
 
 
 # ======================
