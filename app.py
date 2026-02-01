@@ -221,10 +221,8 @@ if uploaded_file and st.button("Process"):
                 "OverallSDProcessStatus": sap_d.get("OverallSDProcessStatus"),
                 "OverallTotalDeliveryStatus": sap_d.get("OverallTotalDeliveryStatus"),
                 "OverallSDDocumentRejectionSts": sap_d.get("OverallSDDocumentRejectionSts"),
-                bq_row = {
-    ...
-    "raw_response": json.dumps(sap_d),
-    "created_at": datetime.utcnow().isoformat()
+                "raw_response": json.dumps(sap_d),
+                "created_at": datetime.utcnow().isoformat()
 }
 
 
