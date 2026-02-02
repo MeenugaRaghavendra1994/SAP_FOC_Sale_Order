@@ -13,44 +13,48 @@ BASE_URL = "https://my411419-api.s4hana.cloud.sap"
 SERVICE_PATH = "/sap/opu/odata/sap/API_SALES_ORDER_WITHOUT_CHARGE_SRV"
 POST_ENDPOINT = SERVICE_PATH + "/A_SalesOrderWithoutCharge"
 
-USERNAME = st.secrets["SAP_USERNAME"]
-PASSWORD = st.secrets["SAP_PASSWORD"]
-
-BQ_PROJECT = st.secrets["BQ_PROJECT"]
-BQ_DATASET = st.secrets["BQ_DATASET"]
 BQ_TABLE = "sap_foc_sales_orders"
 
 # ======================
-# BIGQUERY CLIENT
+# SAFE LAZY CLIENTS (🔥 FIX)
 # ======================
-credentials = service_account.Credentials.from_service_account_info(
-    st.secrets["gcp_service_account"]
-)
+@st.cache_resource
+def get_bq_client():
+    credentials = service_account.Credentials.from_service_account_info(
+        st.secrets["gcp_service_account"]
+    )
+    return bigquery.Client(
+        project=st.secrets["BQ_PROJECT"],
+        credentials=credentials,
+        location="asia-south1"
+    )
 
-bq_client = bigquery.Client(
-    project=BQ_PROJECT,
-    credentials=credentials,
-    location="asia-south1"
-)
 
-# ======================
-# SESSION
-# ======================
-session = requests.Session()
-session.auth = (USERNAME, PASSWORD)
+@st.cache_resource
+def get_sap_session():
+    s = requests.Session()
+    s.auth = (
+        st.secrets["SAP_USERNAME"],
+        st.secrets["SAP_PASSWORD"]
+    )
+    return s
+
 
 # ======================
 # HELPERS
 # ======================
 def fetch_csrf_token():
+    session = get_sap_session()
     headers = {"x-csrf-token": "Fetch", "Accept": "application/json"}
     r = session.get(BASE_URL + SERVICE_PATH, headers=headers)
     r.raise_for_status()
     return r.headers.get("x-csrf-token")
 
+
 def sap_today_date():
-    today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    today = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
     return f"/Date({int(today.timestamp() * 1000)})/"
+
 
 # 🔥 BUILD ONE PAYLOAD PER SoldToParty + PO
 def build_group_payload(group_df, today_date):
@@ -96,7 +100,9 @@ def build_group_payload(group_df, today_date):
         }
     }
 
+
 def save_to_bigquery(d):
+    bq_client = get_bq_client()
 
     row = {
         "SalesOrderWithoutCharge": d.get("SalesOrderWithoutCharge"),
@@ -115,17 +121,17 @@ def save_to_bigquery(d):
         "created_at": datetime.utcnow().isoformat()
     }
 
-    table_id = f"{BQ_PROJECT}.{BQ_DATASET}.{BQ_TABLE}"
+    table_id = f"{st.secrets['BQ_PROJECT']}.{st.secrets['BQ_DATASET']}.{BQ_TABLE}"
 
     job = bq_client.load_table_from_json(
         [row],
         table_id,
-        location="asia-south1",
         job_config=bigquery.LoadJobConfig(
             write_disposition="WRITE_APPEND"
         )
     )
     job.result()
+
 
 # ======================
 # STREAMLIT UI
@@ -157,12 +163,13 @@ if uploaded_file:
         "with the listed materials as items."
     )
 
-    # 🔒 CONFIRMATION
     confirm = st.checkbox("I have reviewed the grouped data and want to proceed")
 
     if confirm and st.button("🚀 Submit to SAP"):
 
+        session = get_sap_session()
         csrf_token = fetch_csrf_token()
+
         headers = {
             "Content-Type": "application/json",
             "Accept": "application/json",
