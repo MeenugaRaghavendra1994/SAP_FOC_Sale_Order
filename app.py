@@ -134,61 +134,84 @@ st.title("🚀 SAP FOC Sales Order → BigQuery")
 
 uploaded_file = st.file_uploader("Upload Excel", type=["xlsx"])
 
-if uploaded_file and st.button("Process"):
+if uploaded_file:
 
     df = pd.read_excel(uploaded_file)
 
-    csrf_token = fetch_csrf_token()
-    headers = {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-        "x-csrf-token": csrf_token
-    }
+    # 🔍 GROUPED PREVIEW
+    st.subheader("📋 Preview – Grouped by SoldToParty")
 
-    today_date = sap_today_date()
-    results = []
+    grouped_preview = (
+        df.groupby(["SoldToParty", "PO_Number"])
+          .agg(
+              ItemCount=("Material", "count"),
+              Materials=("Material", lambda x: ", ".join(map(str, x)))
+          )
+          .reset_index()
+    )
 
-    # 🔥 GROUP BY SoldToParty + PO
-    grouped = df.groupby(["SoldToParty", "PO_Number"])
+    st.dataframe(grouped_preview)
 
-    for (sold_to, po), group_df in grouped:
+    st.info(
+        "ℹ️ Each row above will create **ONE SAP Sales Order** "
+        "with the listed materials as items."
+    )
 
-        payload = build_group_payload(group_df, today_date)
+    # 🔒 CONFIRMATION
+    confirm = st.checkbox("I have reviewed the grouped data and want to proceed")
 
-        response = session.post(
-            BASE_URL + POST_ENDPOINT,
-            json=payload,
-            headers=headers
-        )
+    if confirm and st.button("🚀 Submit to SAP"):
 
-        if response.status_code == 201:
-            sap_d = response.json()["d"]
+        csrf_token = fetch_csrf_token()
+        headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "x-csrf-token": csrf_token
+        }
 
-            save_to_bigquery(sap_d)
+        today_date = sap_today_date()
+        results = []
 
-            results.append({
-                "SoldToParty": sold_to,
-                "SalesOrderWithoutCharge": sap_d["SalesOrderWithoutCharge"],
-                "Status": "SUCCESS"
-            })
+        grouped = df.groupby(["SoldToParty", "PO_Number"])
 
-            st.success(
-                f"SUCCESS → SoldToParty {sold_to} | "
-                f"Order {sap_d['SalesOrderWithoutCharge']} "
-                f"({len(group_df)} items)"
+        for (sold_to, po), group_df in grouped:
+
+            payload = build_group_payload(group_df, today_date)
+
+            response = session.post(
+                BASE_URL + POST_ENDPOINT,
+                json=payload,
+                headers=headers
             )
 
-        else:
-            results.append({
-                "SoldToParty": sold_to,
-                "SalesOrderWithoutCharge": None,
-                "Status": "FAILED",
-                "Error": response.text
-            })
+            if response.status_code == 201:
+                sap_d = response.json()["d"]
+                save_to_bigquery(sap_d)
 
-            st.error(
-                f"FAILED → SoldToParty {sold_to} | Error: {response.text}"
-            )
+                results.append({
+                    "SoldToParty": sold_to,
+                    "PO_Number": po,
+                    "SalesOrderWithoutCharge": sap_d["SalesOrderWithoutCharge"],
+                    "Items": len(group_df),
+                    "Status": "SUCCESS"
+                })
 
-    st.success("Processing completed")
-    st.dataframe(pd.DataFrame(results))
+                st.success(
+                    f"SUCCESS → SoldToParty {sold_to} | "
+                    f"Order {sap_d['SalesOrderWithoutCharge']} "
+                    f"({len(group_df)} items)"
+                )
+
+            else:
+                results.append({
+                    "SoldToParty": sold_to,
+                    "PO_Number": po,
+                    "SalesOrderWithoutCharge": None,
+                    "Items": len(group_df),
+                    "Status": "FAILED"
+                })
+
+                st.error(f"FAILED → SoldToParty {sold_to} | {response.text}")
+
+        st.subheader("📊 Processing Summary")
+        st.dataframe(pd.DataFrame(results))
