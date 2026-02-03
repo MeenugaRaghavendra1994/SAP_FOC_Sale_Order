@@ -205,9 +205,8 @@ if uploaded_file:
 
     confirm = st.checkbox("I have reviewed the grouped data and want to proceed")
 
-    if confirm and st.button("🚀 Submit to SAP"):
+if confirm and st.button("🚀 Submit to SAP"):
 
-    # --- SAP session & CSRF ---
     session = get_sap_session()
     csrf_token = fetch_csrf_token()
 
@@ -220,7 +219,6 @@ if uploaded_file:
     today_date = sap_today_date()
     results = []
 
-    # --- GROUP DATA ---
     grouped = df.groupby(["SoldToParty", "PO_Number"])
 
     for (sold_to, po), group_df in grouped:
@@ -236,10 +234,7 @@ if uploaded_file:
         if response.status_code == 201:
             sap_d = response.json()["d"]
 
-            # Save header
             save_to_bigquery(sap_d)
-
-            # Save items
             save_items_to_bigquery(
                 sap_d["SalesOrderWithoutCharge"],
                 group_df
@@ -274,4 +269,3 @@ if uploaded_file:
 
     st.subheader("📊 Processing Summary")
     st.dataframe(pd.DataFrame(results))
-
