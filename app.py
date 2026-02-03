@@ -135,6 +135,34 @@ def save_to_bigquery(d):
         )
     )
     job.result()
+    def save_items_to_bigquery(order_no, group_df):
+    bq_client = get_bq_client()
+
+    rows = []
+
+    for _, row in group_df.iterrows():
+        rows.append({
+            "SalesOrderWithoutCharge": order_no,
+            "ItemNumber": str(row["Item"]),
+            "Material": str(row["Material"]),
+            "RequestedQuantity": str(row["Qty"]),
+            "Plant": str(row["Plant"]),
+            "StorageLocation": str(row["StorageLocation"]),
+            "ShippingPoint": str(row["ShippingPoint"]),
+            "created_at": datetime.utcnow().isoformat()
+        })
+
+    table_id = f"{st.secrets['BQ_PROJECT']}.{st.secrets['BQ_DATASET']}.sap_foc_sales_order_items"
+
+    job = bq_client.load_table_from_json(
+        rows,
+        table_id,
+        job_config=bigquery.LoadJobConfig(
+            write_disposition="WRITE_APPEND"
+        )
+    )
+    job.result()
+
 
 
 # ======================
@@ -196,8 +224,14 @@ if uploaded_file:
             )
 
             if response.status_code == 201:
-                sap_d = response.json()["d"]
-                save_to_bigquery(sap_d)
+    sap_d = response.json()["d"]
+
+    save_to_bigquery(sap_d)   # header
+    save_items_to_bigquery(
+        sap_d["SalesOrderWithoutCharge"],
+        group_df
+    )
+
 
                 results.append({
                     "SoldToParty": sold_to,
