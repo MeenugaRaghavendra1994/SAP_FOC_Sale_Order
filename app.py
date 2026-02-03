@@ -137,7 +137,9 @@ def save_to_bigquery(d):
         )
     )
     job.result()
-    def save_items_to_bigquery(order_no, group_df):
+
+
+def save_items_to_bigquery(order_no, group_df):
     bq_client = get_bq_client()
 
     rows = []
@@ -154,7 +156,11 @@ def save_to_bigquery(d):
             "created_at": datetime.utcnow().isoformat()
         })
 
-    table_id = f"{st.secrets['BQ_PROJECT']}.{st.secrets['BQ_DATASET']}.sap_foc_sales_order_items"
+    table_id = (
+        f"{st.secrets['BQ_PROJECT']}."
+        f"{st.secrets['BQ_DATASET']}."
+        f"sap_foc_sales_order_items"
+    )
 
     job = bq_client.load_table_from_json(
         rows,
@@ -225,29 +231,29 @@ if uploaded_file:
                 headers=headers
             )
 
-            if response.status_code == 201:
+           if response.status_code == 201:
     sap_d = response.json()["d"]
 
-    save_to_bigquery(sap_d)   # header
+    save_to_bigquery(sap_d)
     save_items_to_bigquery(
         sap_d["SalesOrderWithoutCharge"],
         group_df
     )
 
+    results.append({
+        "SoldToParty": sold_to,
+        "PO_Number": po,
+        "SalesOrderWithoutCharge": sap_d["SalesOrderWithoutCharge"],
+        "Items": len(group_df),
+        "Status": "SUCCESS"
+    })
 
-                results.append({
-                    "SoldToParty": sold_to,
-                    "PO_Number": po,
-                    "SalesOrderWithoutCharge": sap_d["SalesOrderWithoutCharge"],
-                    "Items": len(group_df),
-                    "Status": "SUCCESS"
-                })
+    st.success(
+        f"SUCCESS → SoldToParty {sold_to} | "
+        f"Order {sap_d['SalesOrderWithoutCharge']} "
+        f"({len(group_df)} items)"
+    )
 
-                st.success(
-                    f"SUCCESS → SoldToParty {sold_to} | "
-                    f"Order {sap_d['SalesOrderWithoutCharge']} "
-                    f"({len(group_df)} items)"
-                )
 
             else:
                 results.append({
