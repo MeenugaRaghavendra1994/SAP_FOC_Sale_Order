@@ -5,6 +5,7 @@ from datetime import datetime
 from google.cloud import bigquery
 from google.oauth2 import service_account
 import json
+from datetime import datetime, timedelta, timezone
 
 # ======================
 # CONFIG
@@ -52,8 +53,11 @@ def fetch_csrf_token():
 
 
 def sap_today_date():
-    today = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-    return f"/Date({int(today.timestamp() * 1000)})/"
+    ist = timezone(timedelta(hours=5, minutes=30))
+    today_ist = datetime.now(ist).replace(
+        hour=0, minute=0, second=0, microsecond=0
+    )
+    return f"/Date({int(today_ist.timestamp() * 1000)})/"
 
 
 # 🔥 BUILD ONE PAYLOAD PER SoldToParty + PO
