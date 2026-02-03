@@ -207,69 +207,67 @@ if uploaded_file:
 
     if confirm and st.button("🚀 Submit to SAP"):
 
-        session = get_sap_session()
-        csrf_token = fetch_csrf_token()
+    session = get_sap_session()
+    csrf_token = fetch_csrf_token()
 
-        headers = {
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-            "x-csrf-token": csrf_token
-        }
+    headers = {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "x-csrf-token": csrf_token
+    }
 
-        today_date = sap_today_date()
-        results = []
+    today_date = sap_today_date()
+    results = []
 
-        grouped = df.groupby(["SoldToParty", "PO_Number"])
+    # ✅ DEFINE grouped BEFORE USING IT
+    grouped = df.groupby(["SoldToParty", "PO_Number"])
 
-for (sold_to, po), group_df in grouped:
+    for (sold_to, po), group_df in grouped:
 
-    payload = build_group_payload(group_df, today_date)
+        payload = build_group_payload(group_df, today_date)
 
-    response = session.post(
-        BASE_URL + POST_ENDPOINT,
-        json=payload,
-        headers=headers
-    )
-
-    if response.status_code == 201:
-        sap_d = response.json()["d"]
-
-        # Save header
-        save_to_bigquery(sap_d)
-
-        # Save items
-        save_items_to_bigquery(
-            sap_d["SalesOrderWithoutCharge"],
-            group_df
+        response = session.post(
+            BASE_URL + POST_ENDPOINT,
+            json=payload,
+            headers=headers
         )
 
-        results.append({
-            "SoldToParty": sold_to,
-            "PO_Number": po,
-            "SalesOrderWithoutCharge": sap_d["SalesOrderWithoutCharge"],
-            "Items": len(group_df),
-            "Status": "SUCCESS"
-        })
+        if response.status_code == 201:
+            sap_d = response.json()["d"]
 
-        st.success(
-            f"SUCCESS → SoldToParty {sold_to} | "
-            f"Order {sap_d['SalesOrderWithoutCharge']} "
-            f"({len(group_df)} items)"
-        )
+            save_to_bigquery(sap_d)
+            save_items_to_bigquery(
+                sap_d["SalesOrderWithoutCharge"],
+                group_df
+            )
 
-    else:
-        results.append({
-            "SoldToParty": sold_to,
-            "PO_Number": po,
-            "SalesOrderWithoutCharge": None,
-            "Items": len(group_df),
-            "Status": "FAILED"
-        })
+            results.append({
+                "SoldToParty": sold_to,
+                "PO_Number": po,
+                "SalesOrderWithoutCharge": sap_d["SalesOrderWithoutCharge"],
+                "Items": len(group_df),
+                "Status": "SUCCESS"
+            })
 
-        st.error(
-            f"FAILED → SoldToParty {sold_to} | "
-            f"{response.text}"
-        )
+            st.success(
+                f"SUCCESS → SoldToParty {sold_to} | "
+                f"Order {sap_d['SalesOrderWithoutCharge']} "
+                f"({len(group_df)} items)"
+            )
 
-        st.subheader("📊 Processing Summary")
-        st.dataframe(pd.DataFrame(results))
+        else:
+            results.append({
+                "SoldToParty": sold_to,
+                "PO_Number": po,
+                "SalesOrderWithoutCharge": None,
+                "Items": len(group_df),
+                "Status": "FAILED"
+            })
+
+            st.error(
+                f"FAILED → SoldToParty {sold_to} | {response.text}"
+            )
+
+    st.subheader("📊 Processing Summary")
+    st.dataframe(pd.DataFrame(results))
+
