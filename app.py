@@ -93,7 +93,6 @@ def build_group_payload(group_df, today_date):
         "PurchaseOrderByCustomer": po,
         "SalesOrderWithoutChargeDate": today_date,
         "RequestedDeliveryDate": today_date,
-        "DeliveryDateTypeRule": "01",
         "TransactionCurrency": "INR",
         "SDDocumentReason": "001",
         "ShippingCondition": "CC",
