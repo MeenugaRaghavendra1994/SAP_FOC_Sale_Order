@@ -85,7 +85,7 @@ def build_group_payload(group_df, today_date):
         "SalesOrderWithoutChargeType": "CBFD",
         "SalesOrganization": "2000",
         "DistributionChannel": "10",
-        "OrganizationDivision": "50",
+        "OrganizationDivision": "00",
         "SoldToParty": sold_to,
         "PurchaseOrderByCustomer": po,
         "SalesOrderWithoutChargeDate": today_date,
