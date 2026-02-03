@@ -24,11 +24,13 @@ def get_bq_client():
     credentials = service_account.Credentials.from_service_account_info(
         st.secrets["gcp_service_account"]
     )
+
     return bigquery.Client(
-        project=st.secrets["BQ_PROJECT"],
+        project=BQ_PROJECT,
         credentials=credentials,
         location="asia-south1"
     )
+
 
 
 @st.cache_resource
