@@ -205,7 +205,7 @@ if uploaded_file:
 
     confirm = st.checkbox("I have reviewed the grouped data and want to proceed")
 
-if confirm and st.button("🚀 Submit to SAP"):
+    if confirm and st.button("🚀 Submit to SAP"):
 
     session = get_sap_session()
     csrf_token = fetch_csrf_token()
